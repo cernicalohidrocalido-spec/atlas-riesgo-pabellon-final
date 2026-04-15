@@ -128,7 +128,7 @@ export default function App() {
 
   // Función para cargar puntos críticos desde INEGI DENUE
   const fetchInegiData = async () => {
-    const TOKEN = "ea639e28-a617-47be-bf49-f0d430a7b91f";
+    const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
     // Categorías críticas para el atlas de riesgo
     const categorias = [
       { key: "gasolinera", color: "#ef4444", label: "Gasolinera" },
@@ -651,12 +651,12 @@ export default function App() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
               
-              {/* WMS Layers from INEGI */}
+              {/* WMS Layers from official sources */}
               {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => (
                 <WMSTileLayer
                   key={layer.id}
-                  url="https://mapas.inegi.org.mx/geoserver/wms"
-                  layers={layer.wmsLayers?.map(name => `Sitio_Inegi:${name}`).join(',')}
+                  url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
+                  layers={layer.wmsLayers?.join(',')}
                   format="image/png"
                   transparent={true}
                   version="1.1.1"

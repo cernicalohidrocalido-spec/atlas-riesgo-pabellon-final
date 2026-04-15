@@ -27,6 +27,7 @@ export interface LayerDef {
   color: string;
   type: 'wms' | 'geojson' | 'local';
   archivo?: string;
+  wmsUrl?: string;
   wmsLayers?: string[];
   weight: number; // Importance in the risk formula (0-2)
   impactType: 'danger' | 'exposure' | 'vulnerability' | 'response';
@@ -66,6 +67,7 @@ export const LAYERS: LayerDef[] = [
     description: 'Corrientes y cuerpos de agua oficiales', 
     color: '#0ea5e9', 
     type: 'wms',
+    wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
     wmsLayers: ['red_hidrografica_250k'],
     weight: 1.2,
     impactType: 'danger'
@@ -78,8 +80,22 @@ export const LAYERS: LayerDef[] = [
     description: 'Zonas históricas de inundación', 
     color: '#1d4ed8', 
     type: 'wms',
-    wmsLayers: ['zonas_inundables'],
+    wmsUrl: 'https://www.atlasnacionalderiesgos.gob.mx/geoserver/wms',
+    wmsLayers: ['Inundaciones_historicas'],
     weight: 1.8,
+    impactType: 'danger'
+  },
+  { 
+    id: 'conagua-acuiferos', 
+    name: 'Acuíferos (CONAGUA)', 
+    category: 'hidro', 
+    icon: Droplets, 
+    description: 'Disponibilidad de agua subterránea', 
+    color: '#0891b2', 
+    type: 'wms',
+    wmsUrl: 'https://sigagis.conagua.gob.mx/geoserver/wms',
+    wmsLayers: ['Acuiferos'],
+    weight: 1.0,
     impactType: 'danger'
   },
   { 
@@ -116,6 +132,7 @@ export const LAYERS: LayerDef[] = [
     description: 'Unidades geológicas y litología', 
     color: '#78350f', 
     type: 'wms',
+    wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
     wmsLayers: ['geologia'],
     weight: 1.0,
     impactType: 'danger'
@@ -128,8 +145,22 @@ export const LAYERS: LayerDef[] = [
     description: 'Topografía digital INEGI', 
     color: '#d97706', 
     type: 'wms',
+    wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
     wmsLayers: ['curvas_nivel'],
     weight: 0.8,
+    impactType: 'danger'
+  },
+  { 
+    id: 'cenapred-sismos', 
+    name: 'Peligro Sísmico (CENAPRED)', 
+    category: 'geo', 
+    icon: AlertTriangle, 
+    description: 'Regionalización sísmica nacional', 
+    color: '#991b1b', 
+    type: 'wms',
+    wmsUrl: 'https://www.atlasnacionalderiesgos.gob.mx/geoserver/wms',
+    wmsLayers: ['Sismicidad'],
+    weight: 1.5,
     impactType: 'danger'
   },
 
@@ -154,6 +185,7 @@ export const LAYERS: LayerDef[] = [
     description: 'Transporte de materiales peligrosos', 
     color: '#475569', 
     type: 'wms',
+    wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
     wmsLayers: ['red_ferroviaria'],
     weight: 1.3,
     impactType: 'danger'
@@ -168,6 +200,7 @@ export const LAYERS: LayerDef[] = [
     description: 'Áreas habitacionales consolidadas', 
     color: '#94a3b8', 
     type: 'wms',
+    wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
     wmsLayers: ['manzanas'],
     weight: 1.0,
     impactType: 'exposure'
@@ -193,6 +226,7 @@ export const LAYERS: LayerDef[] = [
     description: 'Censo de Población y Vivienda', 
     color: '#8b5cf6', 
     type: 'wms',
+    wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
     wmsLayers: ['poblacion_total'],
     weight: 1.4,
     impactType: 'vulnerability'
