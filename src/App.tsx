@@ -31,7 +31,8 @@ import {
   MapPin,
   CloudRain,
   Thermometer,
-  Eye
+  Eye,
+  Navigation2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, LayerGroup, WMSTileLayer, useMapEvents, Polyline, Polygon } from 'react-leaflet';
@@ -125,6 +126,7 @@ export default function App() {
   const [inegiPoints, setInegiPoints] = useState<any[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showStreetView, setShowStreetView] = useState(false);
 
   // Función para cargar puntos críticos desde INEGI DENUE
   const fetchInegiData = async () => {
@@ -640,29 +642,55 @@ export default function App() {
         <div className="flex-1 flex overflow-hidden">
           {/* Map Container */}
           <div className="flex-1 relative">
-            <MapContainer 
-              center={PABELLON_COORDS} 
-              zoom={13} 
-              style={{ height: '100%', width: '100%' }}
-              zoomControl={false}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              
-              {/* WMS Layers from official sources */}
-              {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => (
-                <WMSTileLayer
-                  key={layer.id}
-                  url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
-                  layers={layer.wmsLayers?.join(',')}
-                  format="image/png"
-                  transparent={true}
-                  version="1.1.1"
-                  opacity={0.7}
-                />
-              ))}
+              <MapContainer 
+                center={PABELLON_COORDS} 
+                zoom={13} 
+                style={{ height: '100%', width: '100%' }}
+                zoomControl={false}
+              >
+                <LayersControl position="topright">
+                  <LayersControl.BaseLayer name="OpenStreetMap">
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                  </LayersControl.BaseLayer>
+                  <LayersControl.BaseLayer checked name="Google Satélite">
+                    <TileLayer
+                      url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+                      attribution='&copy; Google Maps'
+                    />
+                  </LayersControl.BaseLayer>
+                  <LayersControl.BaseLayer name="Google Híbrido">
+                    <TileLayer
+                      url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                      attribution='&copy; Google Maps'
+                    />
+                  </LayersControl.BaseLayer>
+                  <LayersControl.BaseLayer name="Google Terreno">
+                    <TileLayer
+                      url="https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}"
+                      attribution='&copy; Google Maps'
+                    />
+                  </LayersControl.BaseLayer>
+
+                  <LayersControl.Overlay checked name="Capas de Riesgo">
+                    <LayerGroup>
+                      {/* WMS Layers from official sources */}
+                      {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => (
+                        <WMSTileLayer
+                          key={layer.id}
+                          url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
+                          layers={layer.wmsLayers?.join(',')}
+                          format="image/png"
+                          transparent={true}
+                          version="1.1.1"
+                          opacity={0.7}
+                        />
+                      ))}
+                    </LayerGroup>
+                  </LayersControl.Overlay>
+                </LayersControl>
 
               {/* Local Risks Visualization */}
               {/* Puntos Críticos de INEGI DENUE */}
@@ -868,6 +896,13 @@ export default function App() {
                         <p className="text-[10px] text-gray-700 leading-relaxed whitespace-pre-wrap">
                           {aiAnalysis}
                         </p>
+                        <button 
+                          onClick={() => setShowStreetView(true)}
+                          className="mt-3 w-full py-2 bg-white border border-blue-200 text-[#1e3a8a] text-[9px] font-bold uppercase rounded flex items-center justify-center gap-2 hover:bg-blue-50 transition-colors"
+                        >
+                          <Navigation2 className="w-3 h-3" />
+                          Ver en Street View
+                        </button>
                       </motion.div>
                     )}
 
@@ -945,6 +980,44 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
       `}} />
+
+      {/* Street View Modal */}
+      <AnimatePresence>
+        {showStreetView && analysisPoint && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-12"
+          >
+            <div className="bg-white w-full h-full rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+              <div className="p-4 bg-[#1e3a8a] text-white flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Navigation2 className="w-5 h-5" />
+                  <h3 className="font-bold text-sm uppercase tracking-tight">Inspección de Campo (Street View)</h3>
+                </div>
+                <button onClick={() => setShowStreetView(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="flex-1 bg-gray-100">
+                <iframe 
+                  width="100%" 
+                  height="100%" 
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                  src={`https://www.google.com/maps/embed/v1/streetview?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || ''}&location=${analysisPoint.lat},${analysisPoint.lng}&heading=210&pitch=10&fov=90`}
+                />
+              </div>
+              <div className="p-4 bg-gray-50 text-[10px] text-gray-500 italic text-center">
+                Ubicación aproximada: {analysisPoint.lat.toFixed(6)}, {analysisPoint.lng.toFixed(6)}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
