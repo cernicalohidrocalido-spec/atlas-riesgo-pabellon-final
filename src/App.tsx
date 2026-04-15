@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, LayerGroup, WMSTileLayer, useMapEvents, Polyline, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { GoogleGenAI } from '@google/genai';
 import { 
   BarChart, 
   Bar, 
@@ -52,6 +53,9 @@ import {
   Pie
 } from 'recharts';
 import { LAYERS, CATEGORIES, LayerDef } from './constants';
+
+// Initialize Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 // Fix for Leaflet default icons
 const DefaultIcon = L.icon({
@@ -119,27 +123,37 @@ export default function App() {
   const [isAnalysisMode, setIsAnalysisMode] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [inegiPoints, setInegiPoints] = useState<any[]>([]);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Función para cargar puntos críticos desde INEGI DENUE
   const fetchInegiData = async () => {
     const TOKEN = "ea639e28-a617-47be-bf49-f0d430a7b91f";
-    // Buscaremos 3 categorías clave para el atlas de riesgo en Pabellón (01006)
-    const categorias = ["gasolinera", "hospital", "escuela"];
+    // Categorías críticas para el atlas de riesgo
+    const categorias = [
+      { key: "gasolinera", color: "#ef4444", label: "Gasolinera" },
+      { key: "hospital", color: "#3b82f6", label: "Hospital/Clínica" },
+      { key: "escuela", color: "#10b981", label: "Escuela/Refugio" },
+      { key: "industria", color: "#f59e0b", label: "Industria" }
+    ];
     let todosLosPuntos: any[] = [];
 
     for (const cat of categorias) {
       try {
-        const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaAct/01/006/0/0/0/0/0/0/0/${cat}/1/50/0/${TOKEN}`;
+        // Buscamos en Pabellón de Arteaga (01006)
+        const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaAct/01/006/0/0/0/0/0/0/0/${cat.key}/1/100/0/${TOKEN}`;
         const response = await fetch(url);
         const data = await response.json();
         if (Array.isArray(data)) {
-          // Les asignamos un color según la categoría
-          const color = cat === 'gasolinera' ? '#f97316' : cat === 'hospital' ? '#ef4444' : '#3b82f6';
-          const puntosConColor = data.map(p => ({ ...p, markerColor: color }));
+          const puntosConColor = data.map(p => ({ 
+            ...p, 
+            markerColor: cat.color,
+            categoryLabel: cat.label
+          }));
           todosLosPuntos = [...todosLosPuntos, ...puntosConColor];
         }
       } catch (err) {
-        console.error(`Error buscando ${cat} en INEGI`, err);
+        console.error(`Error buscando ${cat.key} en INEGI`, err);
       }
     }
     setInegiPoints(todosLosPuntos);
@@ -283,6 +297,7 @@ export default function App() {
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
     setAnalysisPoint(e.latlng);
     calculateRiskAtPoint(e.latlng);
+    setAiAnalysis(null);
     if (isAnalysisMode) setIsAnalysisMode(false);
   }, [calculateRiskAtPoint, isAnalysisMode]);
 
@@ -292,6 +307,7 @@ export default function App() {
 
   const handleLocate = () => {
     setIsLocating(true);
+    setAiAnalysis(null);
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition((position) => {
         const { latitude, longitude } = position.coords;
@@ -330,6 +346,32 @@ export default function App() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const getAiAnalysis = async () => {
+    if (!analysisPoint || pointRisks.length === 0) return;
+    
+    setIsAiLoading(true);
+    try {
+      const prompt = `Eres un experto en protección civil y gestión de riesgos para el municipio de Pabellón de Arteaga, Aguascalientes. 
+      Analiza los siguientes riesgos detectados en las coordenadas (${analysisPoint.lat}, ${analysisPoint.lng}):
+      ${pointRisks.map(r => `- ${r.name} (Nivel: ${r.level}, Tipo: ${r.type})`).join('\n')}
+      
+      Proporciona una breve evaluación técnica (máximo 150 palabras) y 3 recomendaciones clave de seguridad para la población en este punto específico. 
+      Responde en español con un tono profesional y directo.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt
+      });
+      
+      setAiAnalysis(response.text || "No se pudo generar el análisis.");
+    } catch (err) {
+      console.error("Error calling Gemini", err);
+      setAiAnalysis("Error al generar el análisis con IA. Por favor, verifica tu GEMINI_API_KEY.");
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   return (
@@ -799,7 +841,36 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100">
+                  <div className="pt-4 border-t border-gray-100 space-y-3">
+                    <button 
+                      onClick={getAiAnalysis}
+                      disabled={isAiLoading || pointRisks.length === 0}
+                      className="w-full py-3 bg-[#1e3a8a] text-white text-[11px] font-bold uppercase tracking-widest rounded-lg hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isAiLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Activity className="w-4 h-4" />
+                      )}
+                      {isAiLoading ? 'Analizando...' : 'Análisis con Gemini AI'}
+                    </button>
+                    
+                    {aiAnalysis && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="p-4 bg-blue-50 border border-blue-100 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Shield className="w-3 h-3 text-[#1e3a8a]" />
+                          <span className="text-[10px] font-bold text-[#1e3a8a] uppercase">Recomendaciones IA</span>
+                        </div>
+                        <p className="text-[10px] text-gray-700 leading-relaxed whitespace-pre-wrap">
+                          {aiAnalysis}
+                        </p>
+                      </motion.div>
+                    )}
+
                     <button className="w-full py-3 bg-[#141414] text-white text-[11px] font-bold uppercase tracking-widest rounded-lg hover:bg-black transition-colors">
                       Generar Reporte de Punto
                     </button>
