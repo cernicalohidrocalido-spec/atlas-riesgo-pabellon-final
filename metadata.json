@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Atlas de Riesgo Pabellón",
+  "description": "Plataforma interactiva de gestión de riesgos y protección civil para Pabellón de Arteaga, Aguascalientes.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
