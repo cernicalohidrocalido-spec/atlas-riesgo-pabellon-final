@@ -676,18 +676,21 @@ export default function App() {
 
                   <LayersControl.Overlay checked name="Capas de Riesgo">
                     <LayerGroup>
-                      {/* WMS Layers from official sources */}
-                      {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => (
-                        <WMSTileLayer
-                          key={layer.id}
-                          url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
-                          layers={layer.wmsLayers?.join(',')}
-                          format="image/png"
-                          transparent={true}
-                          version="1.1.1"
-                          opacity={0.7}
-                        />
-                      ))}
+              {/* WMS Layers from official sources */}
+              {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
+                console.log(`Rendering WMS Layer: ${layer.name} (${layer.wmsLayers?.join(',')})`);
+                return (
+                  <WMSTileLayer
+                    key={layer.id}
+                    url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
+                    layers={layer.wmsLayers?.join(',')}
+                    format="image/png"
+                    transparent={true}
+                    version="1.1.1"
+                    opacity={0.7}
+                  />
+                );
+              })}
                     </LayerGroup>
                   </LayersControl.Overlay>
                 </LayersControl>

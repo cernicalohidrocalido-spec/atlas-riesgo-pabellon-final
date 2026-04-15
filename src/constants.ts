@@ -68,7 +68,7 @@ export const LAYERS: LayerDef[] = [
     color: '#0ea5e9', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['red_hidrografica_250k'],
+    wmsLayers: ['Sitio_Inegi:red_hidrografica_250k'],
     weight: 1.2,
     impactType: 'danger'
   },
@@ -81,7 +81,7 @@ export const LAYERS: LayerDef[] = [
     color: '#1d4ed8', 
     type: 'wms',
     wmsUrl: 'https://www.atlasnacionalderiesgos.gob.mx/geoserver/wms',
-    wmsLayers: ['Inundaciones_historicas'],
+    wmsLayers: ['anr:Inundaciones_historicas'],
     weight: 1.8,
     impactType: 'danger'
   },
@@ -94,7 +94,7 @@ export const LAYERS: LayerDef[] = [
     color: '#0891b2', 
     type: 'wms',
     wmsUrl: 'https://sigagis.conagua.gob.mx/geoserver/wms',
-    wmsLayers: ['Acuiferos'],
+    wmsLayers: ['conagua:Acuiferos'],
     weight: 1.0,
     impactType: 'danger'
   },
@@ -133,7 +133,7 @@ export const LAYERS: LayerDef[] = [
     color: '#78350f', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['geologia'],
+    wmsLayers: ['Sitio_Inegi:geologia'],
     weight: 1.0,
     impactType: 'danger'
   },
@@ -146,7 +146,7 @@ export const LAYERS: LayerDef[] = [
     color: '#d97706', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['curvas_nivel'],
+    wmsLayers: ['Sitio_Inegi:curvas_nivel'],
     weight: 0.8,
     impactType: 'danger'
   },
@@ -159,7 +159,7 @@ export const LAYERS: LayerDef[] = [
     color: '#991b1b', 
     type: 'wms',
     wmsUrl: 'https://www.atlasnacionalderiesgos.gob.mx/geoserver/wms',
-    wmsLayers: ['Sismicidad'],
+    wmsLayers: ['anr:Sismicidad'],
     weight: 1.5,
     impactType: 'danger'
   },
@@ -186,7 +186,7 @@ export const LAYERS: LayerDef[] = [
     color: '#475569', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['red_ferroviaria'],
+    wmsLayers: ['Sitio_Inegi:red_ferroviaria'],
     weight: 1.3,
     impactType: 'danger'
   },
@@ -201,7 +201,7 @@ export const LAYERS: LayerDef[] = [
     color: '#94a3b8', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['manzanas'],
+    wmsLayers: ['Sitio_Inegi:manzanas'],
     weight: 1.0,
     impactType: 'exposure'
   },
@@ -227,7 +227,7 @@ export const LAYERS: LayerDef[] = [
     color: '#8b5cf6', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['poblacion_total'],
+    wmsLayers: ['Sitio_Inegi:poblacion_total'],
     weight: 1.4,
     impactType: 'vulnerability'
   },
