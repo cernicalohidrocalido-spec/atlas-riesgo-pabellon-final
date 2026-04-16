@@ -10,7 +10,6 @@ import {
   Shield, 
   Info, 
   Layers, 
-  Search, 
   Bell, 
   Menu, 
   X, 
@@ -32,7 +31,9 @@ import {
   CloudRain,
   Thermometer,
   Eye,
-  Navigation2
+  Navigation2,
+  Search,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, LayerGroup, WMSTileLayer, useMapEvents, Polyline, Polygon } from 'react-leaflet';
@@ -104,6 +105,15 @@ function MapEvents({ onClick, onMouseMove }: { onClick: (e: L.LeafletMouseEvent)
     }, 500);
   }, [map]);
 
+  // Listener para eventos de vuelo del mapa
+  useEffect(() => {
+    const handleFlyTo = (e: any) => {
+      map.flyTo(e.detail, 17);
+    };
+    window.addEventListener('map-fly-to', handleFlyTo);
+    return () => window.removeEventListener('map-fly-to', handleFlyTo);
+  }, [map]);
+
   return null;
 }
 
@@ -117,7 +127,6 @@ export default function App() {
   const [pointRisks, setPointRisks] = useState<any[]>([]);
   const [riskScore, setRiskScore] = useState<number>(0);
   const [userLayers, setUserLayers] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set(['hidro']));
   const [weatherAlerts, setWeatherAlerts] = useState<any[]>([]);
   const [currentWeather, setCurrentWeather] = useState<any>(null);
@@ -127,6 +136,65 @@ export default function App() {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showStreetView, setShowStreetView] = useState(false);
+  const [approxAddress, setApproxAddress] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Función para obtener dirección aproximada desde Google Geocoding
+  const fetchAddress = async (lat: number, lng: number) => {
+    const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${KEY}`);
+      const data = await response.json();
+      if (data.status === 'OK' && data.results.length > 0) {
+        setApproxAddress(data.results[0].formatted_address);
+      } else {
+        setApproxAddress(null);
+      }
+    } catch (err) {
+      console.error("Error fetching address:", err);
+      setApproxAddress(null);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
+    setIsSearching(true);
+    try {
+      // Buscamos con sesgo hacia Pabellón de Arteaga
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${KEY}&components=country:MX&location=22.1444,-102.2767&radius=10000`);
+      const data = await response.json();
+      if (data.status === 'OK') {
+        setSearchResults(data.results);
+      }
+    } catch (err) {
+      console.error("Error searching address:", err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectResult = (result: any) => {
+    const { lat, lng } = result.geometry.location;
+    const latlng = new L.LatLng(lat, lng);
+    setAnalysisPoint(latlng);
+    calculateRiskAtPoint(latlng);
+    setApproxAddress(result.formatted_address);
+    setAiAnalysis(null);
+    setSearchResults([]);
+    setSearchQuery('');
+    
+    // Necesitamos acceder a la instancia del mapa para hacer flyTo
+    // Usaremos un evento personalizado o buscaremos la forma de dispararlo
+    window.dispatchEvent(new CustomEvent('map-fly-to', { detail: latlng }));
+  };
 
   // Función para cargar puntos críticos desde INEGI DENUE
   const fetchInegiData = async () => {
@@ -300,6 +368,7 @@ export default function App() {
     setAnalysisPoint(e.latlng);
     calculateRiskAtPoint(e.latlng);
     setAiAnalysis(null);
+    fetchAddress(e.latlng.lat, e.latlng.lng);
     if (isAnalysisMode) setIsAnalysisMode(false);
   }, [calculateRiskAtPoint, isAnalysisMode]);
 
@@ -316,6 +385,7 @@ export default function App() {
         const latlng = new L.LatLng(latitude, longitude);
         setAnalysisPoint(latlng);
         calculateRiskAtPoint(latlng);
+        fetchAddress(latitude, longitude);
         setIsLocating(false);
       }, (error) => {
         console.error("Error getting location", error);
@@ -642,13 +712,57 @@ export default function App() {
         <div className="flex-1 flex overflow-hidden">
           {/* Map Container */}
           <div className="flex-1 relative">
-              <MapContainer 
-                center={PABELLON_COORDS} 
-                zoom={13} 
-                style={{ height: '100%', width: '100%' }}
-                zoomControl={false}
-              >
-                <LayersControl position="topright">
+            <MapContainer 
+              center={PABELLON_COORDS} 
+              zoom={13} 
+              style={{ height: '100%', width: '100%' }}
+              zoomControl={false}
+            >
+              {/* Search Bar */}
+              <div className="absolute top-4 left-4 z-[1001] w-80">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    {isSearching ? (
+                      <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Buscar dirección o lugar..."
+                    className="block w-full pl-10 pr-3 py-2.5 bg-white border border-[#141414] rounded-xl text-xs font-medium placeholder-gray-400 shadow-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  />
+                  
+                  <AnimatePresence>
+                    {searchResults.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute mt-2 w-full bg-white border border-[#141414] rounded-xl shadow-2xl overflow-hidden"
+                      >
+                        {searchResults.map((result, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSelectResult(result)}
+                            className="w-full text-left px-4 py-3 text-[11px] hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors"
+                          >
+                            <p className="font-bold text-gray-800 truncate">{result.formatted_address}</p>
+                            <p className="text-[9px] text-gray-400 uppercase tracking-tighter">
+                              {result.geometry.location.lat.toFixed(4)}, {result.geometry.location.lng.toFixed(4)}
+                            </p>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <LayersControl position="topright">
                   <LayersControl.BaseLayer name="OpenStreetMap">
                     <TileLayer
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -825,7 +939,13 @@ export default function App() {
                     <p className="text-3xl font-bold tracking-tight mb-1">
                       {riskScore >= 7 ? 'RIESGO ALTO' : riskScore >= 4 ? 'RIESGO MEDIO' : 'RIESGO BAJO'}
                     </p>
-                    <p className="text-[11px] opacity-80 mb-4">Score: {riskScore.toFixed(1)} / 10 · {pointRisks.length} factores detectados</p>
+                    <p className="text-[11px] opacity-80 mb-2">Score: {riskScore.toFixed(1)} / 10 · {pointRisks.length} factores detectados</p>
+                    {approxAddress && (
+                      <div className="flex items-start gap-2 mb-4 opacity-90">
+                        <MapPin className="w-3 h-3 mt-0.5 shrink-0" />
+                        <p className="text-[10px] leading-tight">{approxAddress}</p>
+                      </div>
+                    )}
                     <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
@@ -1020,7 +1140,7 @@ export default function App() {
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer"
-                  src={`https://www.google.com/maps/embed/v1/streetview?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || ''}&location=${analysisPoint.lat},${analysisPoint.lng}&heading=210&pitch=10&fov=90`}
+                  src={`https://www.google.com/maps/embed/v1/streetview?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA'}&location=${analysisPoint.lat},${analysisPoint.lng}&heading=210&pitch=10&fov=90`}
                 />
               </div>
               <div className="p-4 bg-gray-50 text-[10px] text-gray-500 italic text-center">
