@@ -676,21 +676,30 @@ export default function App() {
 
                   <LayersControl.Overlay checked name="Capas de Riesgo">
                     <LayerGroup>
-              {/* WMS Layers from official sources */}
-              {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
-                console.log(`Rendering WMS Layer: ${layer.name} (${layer.wmsLayers?.join(',')})`);
-                return (
-                  <WMSTileLayer
-                    key={layer.id}
-                    url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
-                    layers={layer.wmsLayers?.join(',')}
-                    format="image/png"
-                    transparent={true}
-                    version="1.1.1"
-                    opacity={0.7}
-                  />
-                );
-              })}
+                      {/* WMS Layers from official sources */}
+                      {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
+                        const isInegi = layer.wmsUrl?.includes('inegi.org.mx');
+                        const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
+                        // Si es INEGI, añadimos el token a la URL
+                        const finalUrl = isInegi ? `${layer.wmsUrl}?token=${TOKEN}` : (layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms");
+                        
+                        console.log(`Rendering WMS Layer: ${layer.name} on ${finalUrl}`);
+                        
+                        return (
+                          <WMSTileLayer
+                            key={layer.id}
+                            url={finalUrl}
+                            layers={layer.wmsLayers?.join(',')}
+                            format="image/png"
+                            transparent={true}
+                            version="1.3.0"
+                            opacity={0.7}
+                            params={{
+                              uppercase: true
+                            }}
+                          />
+                        );
+                      })}
                     </LayerGroup>
                   </LayersControl.Overlay>
                 </LayersControl>

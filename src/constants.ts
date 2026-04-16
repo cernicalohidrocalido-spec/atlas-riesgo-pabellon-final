@@ -68,7 +68,7 @@ export const LAYERS: LayerDef[] = [
     color: '#0ea5e9', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['Sitio_Inegi:red_hidrografica_250k'],
+    wmsLayers: ['Sitio_Inegi:RH00_250_P'],
     weight: 1.2,
     impactType: 'danger'
   },
@@ -201,7 +201,7 @@ export const LAYERS: LayerDef[] = [
     color: '#94a3b8', 
     type: 'wms',
     wmsUrl: 'https://mapas.inegi.org.mx/geoserver/wms',
-    wmsLayers: ['Sitio_Inegi:manzanas'],
+    wmsLayers: ['Sitio_Inegi:m_manzana'],
     weight: 1.0,
     impactType: 'exposure'
   },
