@@ -144,7 +144,7 @@ export default function App() {
 
   // Función para obtener dirección aproximada desde Google Geocoding
   const fetchAddress = async (lat: number, lng: number) => {
-    const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
+    const KEY = process.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDzet-4gyen7kqIh8aYCRRIeUjbyvcFRDo';
     const isStatic = window.location.hostname.includes('github.io');
     
     try {
@@ -183,7 +183,7 @@ export default function App() {
       return;
     }
 
-    const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
+    const KEY = process.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDzet-4gyen7kqIh8aYCRRIeUjbyvcFRDo';
     const isStatic = window.location.hostname.includes('github.io');
     setIsSearching(true);
     
@@ -880,14 +880,7 @@ export default function App() {
                         <LayerGroup>
                           {/* WMS Layers from official sources */}
                           {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
-                            const isInegi = layer.wmsUrl?.includes('inegi.org.mx');
-                            const isConagua = layer.wmsUrl?.includes('conagua.gob.mx');
-                            const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
-                            
-                            // INEGI prefiere 1.3.0, CONAGUA/CENAPRED suelen usar 1.1.1
-                            const wmsVersion = isInegi ? "1.3.0" : "1.1.1";
-                            
-                            console.log(`Rendering WMS Layer: ${layer.name} on ${layer.wmsUrl} (Version ${wmsVersion})`);
+                            console.log(`Rendering WMS Layer: ${layer.name} on ${layer.wmsUrl} (Version 1.1.1)`);
                             
                             return (
                               <WMSTileLayer
@@ -896,11 +889,10 @@ export default function App() {
                                 layers={layer.wmsLayers?.join(',')}
                                 format="image/png"
                                 transparent={true}
-                                version={wmsVersion}
+                                version="1.1.1"
                                 opacity={0.7}
                                 params={{
-                                  uppercase: true,
-                                  ...(isInegi ? { token: TOKEN } : {})
+                                  uppercase: true
                                 }}
                               />
                             );
@@ -1231,7 +1223,7 @@ export default function App() {
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer"
-                  src={`https://www.google.com/maps/embed/v1/streetview?key=${(import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA'}&location=${analysisPoint.lat},${analysisPoint.lng}&heading=210&pitch=10&fov=90`}
+                  src={`https://www.google.com/maps/embed/v1/streetview?key=${process.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDzet-4gyen7kqIh8aYCRRIeUjbyvcFRDo'}&location=${analysisPoint.lat},${analysisPoint.lng}&heading=210&pitch=10&fov=90`}
                 />
               </div>
               <div className="p-4 bg-gray-50 text-[10px] text-gray-500 italic text-center">
