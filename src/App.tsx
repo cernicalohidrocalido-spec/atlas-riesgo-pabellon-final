@@ -121,7 +121,7 @@ export default function App() {
   console.log("Atlas de Riesgo: App Mounting");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'capas' | 'mias' | 'alertas' | 'github'>('capas');
-  const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set(['limite']));
+  const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set(['limite', 'inegi-hid', 'conagua-inund']));
   const [analysisPoint, setAnalysisPoint] = useState<L.LatLng | null>(null);
   const [hoverCoords, setHoverCoords] = useState<L.LatLng | null>(null);
   const [pointRisks, setPointRisks] = useState<any[]>([]);
@@ -538,6 +538,25 @@ export default function App() {
               </div>
             </div>
 
+            <div className="p-4 border-b border-[#141414] bg-gray-50">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase text-gray-500">Estado de APIs</span>
+                <div className="flex gap-1">
+                  <div className={`w-2 h-2 rounded-full ${apiError ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 text-[9px] text-gray-600">
+                  <div className={`w-1.5 h-1.5 rounded-full ${apiError?.includes('Google') ? 'bg-red-400' : 'bg-green-400'}`} />
+                  Google Maps
+                </div>
+                <div className="flex items-center gap-2 text-[9px] text-gray-600">
+                  <div className={`w-1.5 h-1.5 rounded-full ${apiError?.includes('INEGI') ? 'bg-red-400' : 'bg-green-400'}`} />
+                  INEGI DENUE
+                </div>
+              </div>
+            </div>
+
             <div className="flex border-b border-[#141414] bg-gray-50">
               {(['capas', 'mias', 'alertas', 'github'] as const).map((tab) => (
                 <button
@@ -857,33 +876,37 @@ export default function App() {
                     />
                   </LayersControl.BaseLayer>
 
-                  <LayersControl.Overlay checked name="Capas de Riesgo">
-                    <LayerGroup>
-                      {/* WMS Layers from official sources */}
-                      {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
-                        const isInegi = layer.wmsUrl?.includes('inegi.org.mx');
-                        const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
-                        
-                        console.log(`Rendering WMS Layer: ${layer.name} on ${layer.wmsUrl}`);
-                        
-                        return (
-                          <WMSTileLayer
-                            key={layer.id}
-                            url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
-                            layers={layer.wmsLayers?.join(',')}
-                            format="image/png"
-                            transparent={true}
-                            version="1.1.1"
-                            opacity={0.7}
-                            params={{
-                              uppercase: true,
-                              ...(isInegi ? { token: TOKEN } : {})
-                            }}
-                          />
-                        );
-                      })}
-                    </LayerGroup>
-                  </LayersControl.Overlay>
+                      <LayersControl.Overlay checked name="Capas de Riesgo">
+                        <LayerGroup>
+                          {/* WMS Layers from official sources */}
+                          {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
+                            const isInegi = layer.wmsUrl?.includes('inegi.org.mx');
+                            const isConagua = layer.wmsUrl?.includes('conagua.gob.mx');
+                            const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
+                            
+                            // INEGI prefiere 1.3.0, CONAGUA/CENAPRED suelen usar 1.1.1
+                            const wmsVersion = isInegi ? "1.3.0" : "1.1.1";
+                            
+                            console.log(`Rendering WMS Layer: ${layer.name} on ${layer.wmsUrl} (Version ${wmsVersion})`);
+                            
+                            return (
+                              <WMSTileLayer
+                                key={layer.id}
+                                url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
+                                layers={layer.wmsLayers?.join(',')}
+                                format="image/png"
+                                transparent={true}
+                                version={wmsVersion}
+                                opacity={0.7}
+                                params={{
+                                  uppercase: true,
+                                  ...(isInegi ? { token: TOKEN } : {})
+                                }}
+                              />
+                            );
+                          })}
+                        </LayerGroup>
+                      </LayersControl.Overlay>
                 </LayersControl>
 
               {/* Local Risks Visualization */}
