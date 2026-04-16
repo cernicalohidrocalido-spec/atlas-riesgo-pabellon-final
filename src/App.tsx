@@ -145,18 +145,33 @@ export default function App() {
   // Función para obtener dirección aproximada desde Google Geocoding
   const fetchAddress = async (lat: number, lng: number) => {
     const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
+    const isStatic = window.location.hostname.includes('github.io');
+    
     try {
-      const response = await fetch(`/api/google/geocode?latlng=${lat},${lng}&key=${KEY}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      if (data.results && data.results.length > 0) {
-        setApproxAddress(data.results[0].formatted_address);
-      } else {
-        setApproxAddress(null);
+      const url = isStatic 
+        ? `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${KEY}&components=country:MX`
+        : `/api/google/geocode?latlng=${lat},${lng}&key=${KEY}`;
+        
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-    } catch (err) {
+      
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        setApproxAddress(data.results[0].formatted_address);
+        setApiError(null);
+      } else if (data.status === 'REQUEST_DENIED' || data.status === 'OVER_QUERY_LIMIT') {
+        setApiError(`Google API: ${data.status}. ${data.error_message || 'Verifica las restricciones de tu API Key.'}`);
+        setApproxAddress(null);
+      } else {
+        setApproxAddress("Dirección no encontrada");
+      }
+    } catch (err: any) {
       console.error("Error fetching address:", err);
-      setApiError("Error al conectar con Google Maps API");
+      setApiError(`Error de conexión: ${err.message}`);
       setApproxAddress(null);
     }
   };
@@ -169,15 +184,33 @@ export default function App() {
     }
 
     const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
+    const isStatic = window.location.hostname.includes('github.io');
     setIsSearching(true);
+    
     try {
-      const response = await fetch(`/api/google/geocode?address=${encodeURIComponent(query)}&key=${KEY}`);
+      const url = isStatic
+        ? `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${KEY}&components=country:MX`
+        : `/api/google/geocode?address=${encodeURIComponent(query)}&key=${KEY}`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      
       if (data.status === 'OK') {
         setSearchResults(data.results);
+        setApiError(null);
+      } else if (data.status === 'REQUEST_DENIED') {
+        setApiError("Google API: Acceso denegado. Verifica tu API Key.");
+      } else if (data.status === 'ZERO_RESULTS') {
+        setSearchResults([]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error searching address:", err);
+      setApiError(`Error al buscar: ${err.message}`);
     } finally {
       setIsSearching(false);
     }
@@ -201,6 +234,8 @@ export default function App() {
   // Función para cargar puntos críticos desde INEGI DENUE
   const fetchInegiData = async () => {
     const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
+    const isStatic = window.location.hostname.includes('github.io');
+    
     // Categorías críticas para el atlas de riesgo
     const categorias = [
       { key: "gasolinera", color: "#ef4444", label: "Gasolinera" },
@@ -212,7 +247,11 @@ export default function App() {
 
     for (const cat of categorias) {
       try {
-        const response = await fetch(`/api/inegi/denue?cat=${cat.key}&token=${TOKEN}`);
+        const url = isStatic
+          ? `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaAct/01/006/0/0/0/0/0/0/0/${cat.key}/1/100/0/${TOKEN}`
+          : `/api/inegi/denue?cat=${cat.key}&token=${TOKEN}`;
+
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         if (Array.isArray(data)) {
@@ -225,7 +264,8 @@ export default function App() {
         }
       } catch (err) {
         console.error(`Error buscando ${cat.key} en INEGI`, err);
-        setApiError("Error al conectar con INEGI DENUE");
+        // Solo mostramos error si no estamos en GitHub Pages (donde CORS es esperado)
+        if (!isStatic) setApiError("Error al conectar con el servidor proxy de INEGI");
       }
     }
     setInegiPoints(todosLosPuntos);
@@ -425,6 +465,13 @@ export default function App() {
   const getAiAnalysis = async () => {
     if (!analysisPoint || pointRisks.length === 0) return;
     
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey === '') {
+      setAiAnalysis("Error: No se ha configurado la GEMINI_API_KEY. Por favor, añádela en el panel de Secretos.");
+      setApiError("Falta GEMINI_API_KEY");
+      return;
+    }
+
     setIsAiLoading(true);
     try {
       const prompt = `Eres un experto en protección civil y gestión de riesgos para el municipio de Pabellón de Arteaga, Aguascalientes. 
@@ -440,9 +487,11 @@ export default function App() {
       const text = response.text();
       
       setAiAnalysis(text || "No se pudo generar el análisis.");
-    } catch (err) {
+      setApiError(null);
+    } catch (err: any) {
       console.error("Error calling Gemini", err);
-      setAiAnalysis("Error al generar el análisis con IA. Por favor, verifica tu GEMINI_API_KEY.");
+      setAiAnalysis(`Error al generar el análisis: ${err.message}`);
+      setApiError("Error en Gemini AI");
     } finally {
       setIsAiLoading(false);
     }

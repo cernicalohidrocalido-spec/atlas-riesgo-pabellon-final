@@ -18,12 +18,18 @@ async function startServer() {
   // Proxy para INEGI DENUE
   app.get("/api/inegi/denue", async (req, res) => {
     const { cat, token } = req.query;
+    console.log(`Proxy INEGI: cat=${cat}, token=${token ? 'present' : 'missing'}`);
     try {
       const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaAct/01/006/0/0/0/0/0/0/0/${cat}/1/100/0/${token}`;
       const response = await fetch(url);
+      if (!response.ok) {
+        console.error(`INEGI API error: ${response.status} ${response.statusText}`);
+        return res.status(response.status).json({ error: `INEGI API error: ${response.statusText}` });
+      }
       const data = await response.json();
       res.json(data);
     } catch (error) {
+      console.error("Proxy INEGI Exception:", error);
       res.status(500).json({ error: "Error fetching INEGI data" });
     }
   });
@@ -31,6 +37,8 @@ async function startServer() {
   // Proxy para Google Geocoding
   app.get("/api/google/geocode", async (req, res) => {
     const { address, latlng, key } = req.query;
+    console.log(`Proxy Google: address=${address}, latlng=${latlng}, key=${key ? 'present' : 'missing'}`);
+    
     let url = "https://maps.googleapis.com/maps/api/geocode/json?";
     if (address) url += `address=${encodeURIComponent(address as string)}&`;
     if (latlng) url += `latlng=${latlng}&`;
@@ -38,9 +46,15 @@ async function startServer() {
     
     try {
       const response = await fetch(url);
+      if (!response.ok) {
+        console.error(`Google API error: ${response.status} ${response.statusText}`);
+        return res.status(response.status).json({ error: `Google API error: ${response.statusText}` });
+      }
       const data = await response.json();
+      console.log(`Google API Response Status: ${data.status}`);
       res.json(data);
     } catch (error) {
+      console.error("Proxy Google Exception:", error);
       res.status(500).json({ error: "Error fetching Google Geocoding data" });
     }
   });
