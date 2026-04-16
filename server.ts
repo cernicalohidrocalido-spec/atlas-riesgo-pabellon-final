@@ -10,9 +10,39 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // API routes can go here if needed in the future
+  // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Proxy para INEGI DENUE
+  app.get("/api/inegi/denue", async (req, res) => {
+    const { cat, token } = req.query;
+    try {
+      const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaAct/01/006/0/0/0/0/0/0/0/${cat}/1/100/0/${token}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Error fetching INEGI data" });
+    }
+  });
+
+  // Proxy para Google Geocoding
+  app.get("/api/google/geocode", async (req, res) => {
+    const { address, latlng, key } = req.query;
+    let url = "https://maps.googleapis.com/maps/api/geocode/json?";
+    if (address) url += `address=${encodeURIComponent(address as string)}&`;
+    if (latlng) url += `latlng=${latlng}&`;
+    url += `key=${key}&components=country:MX`;
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Error fetching Google Geocoding data" });
+    }
   });
 
   // Vite middleware for development

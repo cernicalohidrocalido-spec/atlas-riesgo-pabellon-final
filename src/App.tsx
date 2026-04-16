@@ -39,7 +39,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, LayersControl, LayerGroup, WMSTileLayer, useMapEvents, Polyline, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { 
   BarChart, 
   Bar, 
@@ -57,7 +57,7 @@ import {
 import { LAYERS, CATEGORIES, LayerDef } from './constants';
 
 // Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Fix for Leaflet default icons
 const DefaultIcon = L.icon({
@@ -140,20 +140,23 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Función para obtener dirección aproximada desde Google Geocoding
   const fetchAddress = async (lat: number, lng: number) => {
     const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
     try {
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${KEY}`);
+      const response = await fetch(`/api/google/geocode?latlng=${lat},${lng}&key=${KEY}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      if (data.status === 'OK' && data.results.length > 0) {
+      if (data.results && data.results.length > 0) {
         setApproxAddress(data.results[0].formatted_address);
       } else {
         setApproxAddress(null);
       }
     } catch (err) {
       console.error("Error fetching address:", err);
+      setApiError("Error al conectar con Google Maps API");
       setApproxAddress(null);
     }
   };
@@ -168,8 +171,7 @@ export default function App() {
     const KEY = (import.meta as any).env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyD8FAEWMfXQwJLlqKKmJjnQuMyhJeG1sKA';
     setIsSearching(true);
     try {
-      // Buscamos con sesgo hacia Pabellón de Arteaga
-      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${KEY}&components=country:MX&location=22.1444,-102.2767&radius=10000`);
+      const response = await fetch(`/api/google/geocode?address=${encodeURIComponent(query)}&key=${KEY}`);
       const data = await response.json();
       if (data.status === 'OK') {
         setSearchResults(data.results);
@@ -210,9 +212,8 @@ export default function App() {
 
     for (const cat of categorias) {
       try {
-        // Buscamos en Pabellón de Arteaga (01006)
-        const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarAreaAct/01/006/0/0/0/0/0/0/0/${cat.key}/1/100/0/${TOKEN}`;
-        const response = await fetch(url);
+        const response = await fetch(`/api/inegi/denue?cat=${cat.key}&token=${TOKEN}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         if (Array.isArray(data)) {
           const puntosConColor = data.map(p => ({ 
@@ -224,6 +225,7 @@ export default function App() {
         }
       } catch (err) {
         console.error(`Error buscando ${cat.key} en INEGI`, err);
+        setApiError("Error al conectar con INEGI DENUE");
       }
     }
     setInegiPoints(todosLosPuntos);
@@ -432,12 +434,12 @@ export default function App() {
       Proporciona una breve evaluación técnica (máximo 150 palabras) y 3 recomendaciones clave de seguridad para la población en este punto específico. 
       Responde en español con un tono profesional y directo.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt
-      });
+      const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
       
-      setAiAnalysis(response.text || "No se pudo generar el análisis.");
+      setAiAnalysis(text || "No se pudo generar el análisis.");
     } catch (err) {
       console.error("Error calling Gemini", err);
       setAiAnalysis("Error al generar el análisis con IA. Por favor, verifica tu GEMINI_API_KEY.");
@@ -448,6 +450,24 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#E4E3E0] text-[#141414] font-sans overflow-hidden">
+      {/* Error Banner */}
+      <AnimatePresence>
+        {apiError && (
+          <motion.div 
+            initial={{ y: -100 }}
+            animate={{ y: 0 }}
+            exit={{ y: -100 }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-xs font-bold"
+          >
+            <AlertTriangle className="w-4 h-4" />
+            <span>{apiError}</span>
+            <button onClick={() => setApiError(null)} className="ml-4 hover:opacity-70">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <AnimatePresence mode="wait">
         {isSidebarOpen && (
@@ -794,22 +814,21 @@ export default function App() {
                       {LAYERS.filter(l => l.type === 'wms' && activeLayers.has(l.id)).map(layer => {
                         const isInegi = layer.wmsUrl?.includes('inegi.org.mx');
                         const TOKEN = "6bce26ed-3908-48e5-ad4a-d11bbb70ba36";
-                        // Si es INEGI, añadimos el token a la URL
-                        const finalUrl = isInegi ? `${layer.wmsUrl}?token=${TOKEN}` : (layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms");
                         
-                        console.log(`Rendering WMS Layer: ${layer.name} on ${finalUrl}`);
+                        console.log(`Rendering WMS Layer: ${layer.name} on ${layer.wmsUrl}`);
                         
                         return (
                           <WMSTileLayer
                             key={layer.id}
-                            url={finalUrl}
+                            url={layer.wmsUrl || "https://mapas.inegi.org.mx/geoserver/wms"}
                             layers={layer.wmsLayers?.join(',')}
                             format="image/png"
                             transparent={true}
-                            version="1.3.0"
+                            version="1.1.1"
                             opacity={0.7}
                             params={{
-                              uppercase: true
+                              uppercase: true,
+                              ...(isInegi ? { token: TOKEN } : {})
                             }}
                           />
                         );
