@@ -44,7 +44,7 @@ import {
 // Reemplaza con la URL de tu Cloudflare Worker para habilitar DENUE en producción
 // Ejemplo: 'https://atlas-denue.tu-usuario.workers.dev'
 // Si es cadena vacía, se usa el proxy local (solo funciona con npm run dev)
-const DENUE_PROXY_URL = '';  // ← Pega aquí tu URL de Cloudflare Worker
+const DENUE_PROXY_URL = 'https://atlas-riesgo-pabellon-final.cernicalo-hidrocalido.workers.dev/';  // ← Pega aquí tu URL de Cloudflare Worker
 
 const TOKEN_DENUE = '6bce26ed-3908-48e5-ad4a-d11bbb70ba36';
 
