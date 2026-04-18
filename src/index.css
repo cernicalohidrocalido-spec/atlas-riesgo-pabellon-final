@@ -1,44 +1,17 @@
 /**
  * index.css — Atlas de Riesgos · Pabellón de Arteaga · IMBIO 2025
- * UI/UX: Dashboard Institucional de Protección Civil
  */
-
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-/* ── Tipografía ─────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
 @theme {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* ── Variables de color institucional ───────────────────────────────── */
-:root {
-  /* Azul Gobierno */
-  --color-gov-900: #1e3a8a;
-  --color-gov-800: #1e40af;
-  --color-gov-700: #1d4ed8;
-  --color-gov-100: #dbeafe;
-
-  /* Riesgo */
-  --color-riesgo-muy-alto: #7f1d1d;
-  --color-riesgo-alto:     #dc2626;
-  --color-riesgo-medio:    #d97706;
-  --color-riesgo-bajo:     #16a34a;
-  --color-riesgo-muy-bajo: #0891b2;
-
-  /* UI */
-  --color-surface:  #ffffff;
-  --color-muted:    #f8fafc;
-  --color-border:   #e2e8f0;
-  --color-text-1:   #0f172a;
-  --color-text-2:   #475569;
-  --color-text-3:   #94a3b8;
-}
-
-/* ── Mapa ────────────────────────────────────────────────────────────── */
+/* ── Leaflet ──────────────────────────────────────────────────────── */
 .leaflet-container {
   width: 100%;
   height: 100%;
@@ -46,63 +19,30 @@
   font-family: var(--font-sans);
 }
 
-/* Controles del mapa: botones de zoom y capas */
-.leaflet-control-zoom a,
-.leaflet-control-layers-toggle {
-  font-family: var(--font-sans) !important;
-  border-radius: 8px !important;
-}
-
-.leaflet-control-layers {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 24px rgba(0,0,0,.15) !important;
-  border: 1px solid var(--color-border) !important;
-}
+.leaflet-control-zoom a { border-radius: 6px !important; }
 
 .leaflet-popup-content-wrapper {
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   box-shadow: 0 8px 32px rgba(0,0,0,.18) !important;
   padding: 0 !important;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid #e2e8f0;
 }
+.leaflet-popup-content { margin: 0 !important; }
+.leaflet-popup-tip { box-shadow: none !important; }
 
-.leaflet-popup-content {
-  margin: 0 !important;
-}
-
-.leaflet-popup-tip {
-  box-shadow: none !important;
-}
-
-/* ── Scrollbar global ─────────────────────────────────────────────── */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #e2e8f0 transparent;
-}
-*::-webkit-scrollbar        { width: 4px; height: 4px; }
-*::-webkit-scrollbar-track  { background: transparent; }
-*::-webkit-scrollbar-thumb  { background: #e2e8f0; border-radius: 10px; }
+/* ── Scrollbar ──────────────────────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 *::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
-/* ── Toggle switch ─────────────────────────────────────────────────── */
-.layer-toggle {
-  transition: background-color 200ms ease, transform 150ms ease;
-}
+/* ── Prevent body scroll on mobile ──────────────────────────────────── */
+html, body { overflow: hidden; height: 100%; }
 
-/* ── Animaciones de riesgo ─────────────────────────────────────────── */
-@keyframes risk-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.7; }
-}
-.risk-badge-muy-alto { animation: risk-pulse 2s ease-in-out infinite; }
-
-/* ── Utility ──────────────────────────────────────────────────────── */
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ── Impresión ────────────────────────────────────────────────────── */
+/* ── Print ──────────────────────────────────────────────────────────── */
 @media print {
   aside, header, button { display: none !important; }
-  main                   { width: 100vw; height: 100vh; }
-  .leaflet-container     { height: 100vh !important; }
+  .leaflet-container { height: 100vh !important; }
 }
